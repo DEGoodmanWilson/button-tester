@@ -177,16 +177,21 @@ class Events < Sinatra::Base
       when 'three'
         msg['text'] = 'BOOYA THREE!'
         msg.delete('attachments')
-        t = Thread.new{
-          msg['text'] = 'BOOYA DONE!'
-          $messages.update_one({callback_id: @request_data['callback_id']}, msg)
-          client = create_slack_client(@token['bot_access_token'])
-          client.chat_update({ text: 'BOOYA DONE!', ts: msg['ts'], channel: msg['channel']})
-        }
     end
 
     # Update the DB
     $messages.update_one({callback_id: @request_data['callback_id']}, msg)
+
+
+    if @request_data['actions'][0]['name'] == 'three'
+      t = Thread.new(@token, @request_data, msg){ |token, request_data, nmsg|
+        sleep 0.1
+        nmsg['text'] = 'BOOYA DONE!'
+        $messages.update_one({callback_id: nmsg['callback_id']}, nmsg)
+        client = create_slack_client(token['bot_access_token'])
+        client.chat_update(text: 'BOOYA DONE!', ts: request_data['message_ts'], channel: nmsg['channel'])
+      }
+    end
 
     # Rather than posting a new message, we'll just respond with the new message to replace the old message!
     content_type :json
