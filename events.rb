@@ -128,19 +128,19 @@ class Events < Sinatra::Base
                   actions: [
                       {
                           name: 'one',
-                          text: 'One',
+                          text: 'Simple message replace',
                           type: 'button',
                           value: 'one'
                       },
                       {
                           name: 'two',
-                          text: 'Two',
+                          text: 'Remove buttons',
                           type: 'button',
                           value: 'two'
                       },
                       {
                           name: 'three',
-                          text: 'Three',
+                          text: 'Remove butons and async update',
                           type: 'button',
                           value: 'three'
                       }
@@ -173,8 +173,16 @@ class Events < Sinatra::Base
         msg['text'] = 'BOOYA ONE!'
       when 'two'
         msg['text'] = 'BOOYA TWO!'
+        msg.delete('attachments')
       when 'three'
         msg['text'] = 'BOOYA THREE!'
+        msg.delete('attachments')
+        t = Thread.new{
+          msg['text'] = 'BOOYA DONE!'
+          $messages.update_one({callback_id: @request_data['callback_id']}, msg)
+          client = create_slack_client(@token['bot_access_token'])
+          client.chat_update({ text: 'BOOYA DONE!', ts: msg['ts'], channel: msg['channel']})
+        }
     end
 
     # Update the DB
